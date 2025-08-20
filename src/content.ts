@@ -2,17 +2,11 @@ console.log("Content script loaded!");
 
 const player = document.getElementById("player") as HTMLElement;
 const video = player.querySelector("video")!;
-const img = document.getElementById("img") as HTMLImageElement;
-img.crossOrigin = "anonymous";
-console.log(img);
 
 const canvas = document.createElement("canvas");
 const canvasCtx = canvas.getContext("2d")!;
 
 player.appendChild(canvas);
-
-const mutationObserver = new MutationObserver(mutationObserverCallback);
-mutationObserver.observe(img, { attributes: true });
 
 const resizeObserver = new ResizeObserver(resizeObserverCallback);
 resizeObserver.observe(player);
@@ -21,72 +15,46 @@ const audioContext = new AudioContext();
 const source = audioContext.createMediaElementSource(video);
 
 const analyzer = audioContext.createAnalyser();
-analyzer.fftSize = 2 ** 8;
+analyzer.fftSize = 2 ** 11;
 
 source.connect(analyzer);
 analyzer.connect(audioContext.destination);
 
-const gravityRate = 3 / 10;
-const uint8Freq = new Uint8Array(analyzer.frequencyBinCount);
-const f32FreqCapsY = new Float32Array(analyzer.frequencyBinCount);
+const uint8Time = new Uint8Array(analyzer.frequencyBinCount);
 
-let currentColor = extractColorsFromImage(img) || [200, 50, 150];
-
-let lastTime = 0;
 requestAnimationFrame(animate);
-function animate(timestamp: number) {
-  const deltaTime = timestamp - lastTime;
-  lastTime = timestamp;
+function animate() {
+  if (document.hidden) return requestAnimationFrame(animate);
 
   requestAnimationFrame(animate);
 
-  analyzer.getByteFrequencyData(uint8Freq);
+  analyzer.getByteTimeDomainData(uint8Time);
   canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // const barWidth = canvas.width / uint8Freq.length;
-  const barWidth = Math.ceil(canvas.width / uint8Freq.length);
+  canvasCtx.shadowBlur = 18;
+  canvasCtx.shadowColor = "#00ff80";
 
-  for (let i = 0; i < uint8Freq.length; i++) {
-    const barHeight = (uint8Freq[i] / 255) * canvas.height;
-    const barTopY = canvas.height - barHeight;
-    const barX = Math.floor(i * barWidth);
+  drawScope(uint8Time, -canvas.height * 0.25, "#3cff96");
+  drawScope(uint8Time, canvas.height * 0.25, "#3cffea");
+}
 
-    const [r, g, b] = currentColor;
+function drawScope(uint8Time: Uint8Array, offsetY: number, color: string) {
+  const slice = canvas.width / uint8Time.length;
+  canvasCtx.beginPath();
 
-    const gradient = canvasCtx.createLinearGradient(
-      0,
-      barTopY,
-      0,
-      canvas.height
-    );
-    gradient.addColorStop(
-      0,
-      `rgb(${Math.min(r + 60, 255)}, ${Math.min(g + 60, 255)}, ${Math.min(
-        b + 60,
-        255
-      )})`
-    );
-    gradient.addColorStop(1, `rgb(${r}, ${g}, ${b})`);
+  const scaleY = canvas.height * 0.4;
+  const centerY = canvas.height / 2 + offsetY;
 
-    canvasCtx.fillStyle = gradient;
-    canvasCtx.fillRect(barX, barTopY, barWidth, barHeight);
-
-    if (!f32FreqCapsY[i] || f32FreqCapsY[i] > barTopY) {
-      f32FreqCapsY[i] = barTopY;
-    } else {
-      f32FreqCapsY[i] += gravityRate * deltaTime;
-      // if (f32FreqCapsY[i] > barTopY) f32FreqCapsY[i] = barTopY;
-    }
-
-    canvasCtx.fillStyle = `rgb(${Math.min(r + 100, 255)}, ${Math.min(
-      g + 100,
-      255
-    )}, ${Math.min(b + 100, 255)})`;
-    canvasCtx.fillRect(barX, f32FreqCapsY[i], barWidth, 4);
+  for (let i = 0; i < uint8Time.length; i++) {
+    const x = i * slice;
+    const v = (uint8Time[i] - 128) / 128;
+    const y = centerY + v * scaleY;
+    if (i === 0) canvasCtx.moveTo(x, y);
+    else canvasCtx.lineTo(x, y);
   }
-  canvasCtx.lineTo(canvas.width, canvas.height);
-  canvasCtx.closePath();
-  canvasCtx.fill();
+
+  canvasCtx.strokeStyle = color;
+  canvasCtx.stroke();
 }
 
 function resizeObserverCallback(entries: ResizeObserverEntry[]) {
@@ -96,41 +64,5 @@ function resizeObserverCallback(entries: ResizeObserverEntry[]) {
     canvas.width = target.clientWidth;
     canvas.height = target.clientHeight;
     break;
-  }
-}
-
-function extractColorsFromImage(img: HTMLImageElement) {
-  const offcanvas = new OffscreenCanvas(img.width, img.height);
-  const ctx = offcanvas.getContext("2d")!;
-
-  offcanvas.width = img.naturalWidth;
-  offcanvas.height = img.naturalHeight;
-  ctx.drawImage(img, 0, 0);
-
-  const data = ctx.getImageData(0, 0, offcanvas.width, offcanvas.height).data;
-  let r = 0,
-    g = 0,
-    b = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    r += data[i];
-    g += data[i + 1];
-    b += data[i + 2];
-  }
-  const count = data.length / 4;
-  r = Math.floor(r / count);
-  g = Math.floor(g / count);
-  b = Math.floor(b / count);
-
-  return [r, g, b];
-}
-
-function mutationObserverCallback(mutations: MutationRecord[]) {
-  for (const mutation of mutations) {
-    if (mutation.type === "attributes" && mutation.attributeName === "src") {
-      const newImg = new Image();
-      newImg.crossOrigin = "anonymous";
-      newImg.src = img.src;
-      newImg.onload = () => (currentColor = extractColorsFromImage(newImg));
-    }
   }
 }
