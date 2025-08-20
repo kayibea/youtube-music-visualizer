@@ -1,0 +1,22 @@
+{
+  "name": "youtube-music-visualizer",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "nodemon",
+    "clean": "rimraf dist/*",
+    "build": "npm run clean && tsc &&  npm run copy",
+    "copy": "copyfiles -u1 public/*.html public/*.css public/*.json dist/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/chrome": "^0.1.4",
+    "@types/node": "^24.3.0",
+    "copyfiles": "^2.4.1",
+    "nodemon": "^3.1.10",
+    "rimraf": "^6.0.1"
+  }
+}
