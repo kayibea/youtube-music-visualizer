@@ -2,4 +2,4 @@
 
 Visualize YouTube Music audio in real-time.
 
-[Demo Video](preview.webm)
+![Preview](preview.gif)
