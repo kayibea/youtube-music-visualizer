@@ -13,6 +13,7 @@ const audioContext = new AudioContext();
 const source = audioContext.createMediaElementSource(video);
 const analyzer = audioContext.createAnalyser();
 analyzer.fftSize = 2 ** 11;
+
 source.connect(analyzer);
 analyzer.connect(audioContext.destination);
 
