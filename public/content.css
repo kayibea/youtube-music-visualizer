@@ -1,5 +1,5 @@
 #player {
-  position: relative;
+  /* position: relative; */
   overflow: hidden;
 }
 
@@ -8,8 +8,9 @@
   top: 0;
   left: 0;
   z-index: 1000;
-  /* background: #000; */
-  background: transparent;
+  /* background: #0000003a; */
+  background: #000000ce;
+  /* background: transparent; */
   pointer-events: none;
   user-select: none;
 }
