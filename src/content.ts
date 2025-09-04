@@ -28,6 +28,9 @@ const data = new Uint8Array(analyser.frequencyBinCount);
 let lastTime = 0;
 const fpsInterval = 1000 / 30;
 
+ctx.shadowBlur = 18;
+ctx.shadowColor = "#00ff80";
+
 requestAnimationFrame(animate);
 function animate(timestamp: number) {
   requestAnimationFrame(animate);
@@ -38,10 +41,7 @@ function animate(timestamp: number) {
   if (document.hidden || video.paused || video.muted) return;
 
   analyser.getByteTimeDomainData(data);
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.shadowBlur = 18;
-  ctx.shadowColor = "#00ff80";
 
   drawScope(data, -canvas.height * 0.25, "#3cff96");
   drawScope(data, canvas.height * 0.25, "#3cffea");
