@@ -2,73 +2,63 @@ const player = document.getElementById("player") as HTMLElement;
 const video = player.querySelector("video")!;
 
 const canvas = document.createElement("canvas");
-const canvasCtx = canvas.getContext("2d")!;
-
+const ctx = canvas.getContext("2d")!;
 player.appendChild(canvas);
 
-const resizeObserver = new ResizeObserver(resizeObserverCallback);
+const resizeObserver = new ResizeObserver((entries) => {
+  for (const entry of entries) {
+    if (entry.target !== player) continue;
+    const { clientWidth, clientHeight } = entry.target;
+    canvas.width = clientWidth;
+    canvas.height = clientHeight;
+  }
+});
 resizeObserver.observe(player);
 
 const audioContext = new AudioContext();
 const source = audioContext.createMediaElementSource(video);
-const analyzer = audioContext.createAnalyser();
-analyzer.fftSize = 2 ** 11;
+const analyser = audioContext.createAnalyser();
+analyser.fftSize = 2048;
 
-source.connect(analyzer);
-analyzer.connect(audioContext.destination);
+source.connect(analyser);
+analyser.connect(audioContext.destination);
 
-const uint8Times = new Uint8Array(analyzer.frequencyBinCount);
+const data = new Uint8Array(analyser.frequencyBinCount);
 
-// const fpsInterval = 1000 / 60;
 let lastTime = 0;
 const fpsInterval = 1000 / 30;
 
 requestAnimationFrame(animate);
 function animate(timestamp: number) {
-  if (!(timestamp - lastTime >= fpsInterval))
-    return requestAnimationFrame(animate);
-
-  lastTime = timestamp;
-
-  if (document.hidden || video.paused || video.muted)
-    return requestAnimationFrame(animate);
-
   requestAnimationFrame(animate);
 
-  analyzer.getByteTimeDomainData(uint8Times);
-  canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+  if (timestamp - lastTime < fpsInterval) return;
+  lastTime = timestamp;
 
-  canvasCtx.shadowBlur = 18;
-  canvasCtx.shadowColor = "#00ff80";
+  if (document.hidden || video.paused || video.muted) return;
 
-  drawScope(uint8Times, -canvas.height * 0.25, "#3cff96");
-  drawScope(uint8Times, canvas.height * 0.25, "#3cffea");
+  analyser.getByteTimeDomainData(data);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = "#00ff80";
+
+  drawScope(data, -canvas.height * 0.25, "#3cff96");
+  drawScope(data, canvas.height * 0.25, "#3cffea");
 }
 
-function drawScope(uint8Times: Uint8Array, offsetY: number, color: string) {
-  const slice = canvas.width / uint8Times.length;
-  canvasCtx.beginPath();
-
+function drawScope(data: Uint8Array, offsetY: number, color: string) {
+  const slice = canvas.width / data.length;
   const scaleY = canvas.height * 0.4;
   const centerY = canvas.height / 2 + offsetY;
 
-  for (let i = 0; i < uint8Times.length; i++) {
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
     const x = i * slice;
-    const v = (uint8Times[i] - 128) / 128;
+    const v = (data[i] - 128) / 128;
     const y = centerY + v * scaleY;
-    if (i === 0) canvasCtx.moveTo(x, y);
-    else canvasCtx.lineTo(x, y);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
-
-  canvasCtx.strokeStyle = color;
-  canvasCtx.stroke();
-}
-
-function resizeObserverCallback(entries: ResizeObserverEntry[]) {
-  for (const entry of entries) {
-    if (entry.target !== player) continue;
-    canvas.width = entry.target.clientWidth;
-    canvas.height = entry.target.clientHeight;
-    break;
-  }
+  ctx.strokeStyle = color;
+  ctx.stroke();
 }
