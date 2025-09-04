@@ -8,9 +8,10 @@
   top: 0;
   left: 0;
   z-index: 1000;
-  /* background: #0000003a; */
-  background: #000000ce;
-  /* background: transparent; */
+  /* background-color: #0000003a; */
+  background-color: #000000ce;
+  /* background-color: crimson; */
+  /* background-color: transparent; */
   pointer-events: none;
   user-select: none;
 }
